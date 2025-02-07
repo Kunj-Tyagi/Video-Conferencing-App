@@ -3,6 +3,7 @@ import { createServer } from "node:http"; //connect socket server and express se
 import mongoose from "mongoose";
 import cors from "cors";
 import { connectToSocket } from "./controllers/socketmanager.js";
+import  userRouter  from "./routes/user.routes.js"; 
 
 const app = express();
 const server = createServer(app);
@@ -12,6 +13,8 @@ app.set("port", process.env.PORT || 8000);
 app.use(cors());
 app.use(express.json({ limit: "40kb" })); //The limit option in express.json() restricts the maximum size of incoming JSON payloads. It prevents excessively large requests from being processed, improving security and performance.
 app.use(express.urlencoded({ extended: true, limit: "40kb" }));
+
+app.use("/api/v1/users", userRouter);
 
 const start = async () => {
   const connectDb = await mongoose.connect(
