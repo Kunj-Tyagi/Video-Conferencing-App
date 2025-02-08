@@ -5,7 +5,14 @@ let messages = {};
 let timeOnline = {};
 
 export const connectToSocket = (server) => {
-  const io = new Server(server);
+  const io = new Server(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+      allowedHeaders: ["*"],
+      credentials: true,
+    },
+  }); //cors:{origin:"*"} is used to allow all the origins to connect to the server.
 
   //jab bhi socket se koi connect hota hai,toh ye event fire hota hai io.on("connection")
   io.on("connection", (socket) => {
