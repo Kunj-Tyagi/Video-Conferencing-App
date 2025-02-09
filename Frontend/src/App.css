@@ -41,7 +41,7 @@
 
 .landingMainContainer > div:nth-child(1)  div[role="button"] {
   background: #d97500;
-  width: fit-content;
+  width: fit-content; /*No idea*/
   padding: .8rem;
   border-radius: 20px;
   margin-top: 1.9rem;
