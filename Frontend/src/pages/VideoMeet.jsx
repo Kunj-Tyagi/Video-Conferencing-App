@@ -1,61 +1,56 @@
 import React, { useRef, useEffect, useState } from "react";
 import { TextField, Button } from "@mui/material"; // Import required components
 import "../styles/VideoComponent.css";
+import { io } from "socket.io-client"; // Import Socket.IO client
 
 const server_url = "http://localhost:8000"; // Server URL for socket connection
 var connections = {}; // Object to store peer connections
 
+// STUN server configuration for WebRTC (used to establish peer connections)
 const peerConfigConnections = {
-  iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }], // STUN server configuration for WebRTC
+  iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
 };
 
 function VideoMeet() {
-  var socketRef = useRef(); // Ref to store the socket connection
-  const socketIdRef = useRef(); // Ref to store the socket ID
-  const localVideoRef = useRef(null); // Ref to store local video stream
-  const videoRef = useRef([]); // Ref to store multiple video streams
+  var socketRef = useRef(); // Store socket connection reference
+  const socketIdRef = useRef(); // Store socket ID
+  const localVideoRef = useRef(null); // Reference for the local video element
+  const videoRef = useRef([]); // Store multiple video streams for remote participants
 
   // State variables
-  let [videoAvailable, setVideoAvailable] = useState(true);
-  let [audioAvailable, setAudioAvailable] = useState(true);
-  let [video, setVideo] = useState(false); // Default value set
-  let [audio, setAudio] = useState(false);
-  let [screenShare, setScreenShare] = useState(false);
-  let [showModal, setModal] = useState(false);
-  let [screenAvailable, setScreenAvailable] = useState(false);
-  let [messages, setMessages] = useState([]);
-  let [message, setMessage] = useState(""); // Default value set
-  let [newMessages, setNewMessages] = useState(0);
-  let [askForUsername, setAskForUsername] = useState(true);
-  let [username, setUsername] = useState(""); // Default value set
-  let [videos, setVideos] = useState([]);
+  let [videoAvailable, setVideoAvailable] = useState(true); // Track video permission
+  let [audioAvailable, setAudioAvailable] = useState(true); // Track audio permission
+  let [video, setVideo] = useState([]); // Store video streams
+  let [audio, setAudio] = useState(); // Store audio state
+  let [screenShare, setScreenShare] = useState(false); // Track screen sharing
+  let [showModal, setModal] = useState(false); // Track modal visibility
+  let [screenAvailable, setScreenAvailable] = useState(false); // Check if screen sharing is available
+  let [messages, setMessages] = useState([]); // Store chat messages
+  let [message, setMessage] = useState(""); // Current chat message
+  let [newMessages, setNewMessages] = useState(0); // Track new message count
+  let [askForUsername, setAskForUsername] = useState(true); // Ask user for a username before connecting
+  let [username, setUsername] = useState(""); // Store entered username
+  let [videos, setVideos] = useState([]); // Store video streams for rendering
 
-  // Function to get permissions for audio and video
+  // Function to get permissions for camera and microphone
   const getPermissions = async () => {
     try {
+      // Request camera access
       const videoPermission = await navigator.mediaDevices.getUserMedia({
         video: true,
       });
-      if (videoPermission) {
-        setVideoAvailable(true);
-      } else {
-        setVideoAvailable(false);
-      }
+      setVideoAvailable(!!videoPermission); // Update video permission status
+
+      // Request microphone access
       const audioPermission = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
-      if (audioPermission) {
-        setAudioAvailable(true);
-      } else {
-        setAudioAvailable(false);
-      }
-      // To check browser support screen sharing or not.
-      if (navigator.mediaDevices.getDisplayMedia) {
-        setScreenAvailable(true);
-      } else {
-        setScreenAvailable(false);
-      }
+      setAudioAvailable(!!audioPermission); // Update audio permission status
 
+      // Check if screen sharing is available in the browser
+      setScreenAvailable(!!navigator.mediaDevices.getDisplayMedia);
+
+      // If either video or audio is available, get the media stream
       if (videoAvailable || audioAvailable) {
         const userMediaStream = await navigator.mediaDevices.getUserMedia({
           video: videoAvailable,
@@ -63,42 +58,147 @@ function VideoMeet() {
         });
 
         if (userMediaStream) {
-          window.localStream = userMediaStream;
+          window.localStream = userMediaStream; // Store global stream for use in WebRTC
           if (localVideoRef.current) {
-            localVideoRef.current.srcObject = userMediaStream;
+            localVideoRef.current.srcObject = userMediaStream; // Assign stream to video element
           }
         }
       }
     } catch (error) {
-      console.log(error);
+      console.log("Error getting media permissions:", error);
     }
   };
 
+  // Run getPermissions on component mount
   useEffect(() => {
     getPermissions();
   }, []);
 
+  // Function to handle user media stream success
   let getUserMediaSuccess = (stream) => {};
 
+  // Function to start or stop media stream
   let getUserMedia = () => {
     if ((video && videoAvailable) || (audio && audioAvailable)) {
       navigator.mediaDevices
         .getUserMedia({ video: video, audio: audio })
         .then(getUserMediaSuccess)
-        .then((stream) => {})
-        .catch((e) => console.log(e));
+        .catch((e) => console.log("Error getting user media:", e));
     } else {
       try {
         let tracks = localVideoRef.current.srcObject.getTracks();
-        tracks.foreach((track) => track.stop());
-      } catch (e) {}
+        tracks.forEach((track) => track.stop()); // Stop all tracks if no media is available
+      } catch (e) {
+        console.log("Error stopping media:", e);
+      }
     }
+  };
+
+  let getMesageFromServer = (fromId, message) => {}; // Handle incoming messages from server
+
+  let addMessage = (data) => {}; // Function to handle chat messages
+
+  // Function to establish a socket connection with the server
+  let connectToSocketServer = () => {
+    socketRef.current = io.connect(server_url, { secure: false });
+
+    // Listen for incoming signals
+    socketRef.current.on("signal", getMesageFromServer);
+
+    // When connected, send join request
+    socketRef.current.on("connect", () => {
+      socketRef.current.emit("join-call", window.location.href);
+      socketIdRef.current = socketRef.current.id;
+
+      // Handle chat messages
+      socketRef.current.on("chat-message", addMessage);
+
+      // Handle user disconnection
+      socketRef.current.on("user-left", (id) => {
+        setVideo((videos) => videos.filter((video) => video.socketId !== id));
+      });
+
+      // Handle new user joining
+      socketRef.current.on("user-joined"),
+        (id, clients) => {
+          clients.forEach((socketListId) => {
+            // Create a new WebRTC connection for each participant
+            connections[socketListId] = new RTCPeerConnection(peerConfigConnections);
+
+            // Send ICE candidates to the peer
+            connections[socketListId].onicecandidate = (e) => {
+              if (e.candidate) {
+                socketRef.current.emit(
+                  "signal",
+                  socketListId,
+                  JSON.stringify({ ice: e.candidate })
+                );
+              }
+            };
+
+            // Add the remote stream when received
+            connections[socketListId].onaddstream = (event) => {
+              let videoExists = videoRef.current.find((video) => video.socketId === socketListId);
+
+              if (videoExists) {
+                setVideo((videos) => {
+                  const updatedVideos = videos.map((video) =>
+                    video.socketId === socketListId ? { ...video, stream: event.stream } : video
+                  );
+                  videoRef.current = updatedVideos;
+                  return updatedVideos;
+                });
+              } else {
+                let newVideo = {
+                  socketId: socketListId,
+                  stream: event.stream,
+                  autoPlay: true,
+                  playsinline: true,
+                };
+
+                setVideos((videos) => {
+                  const updatedVideos = [...videos, newVideo];
+                  videoRef.current = updatedVideos;
+                  return updatedVideos;
+                });
+              }
+            };
+
+            // Add local stream to peer connection
+            if (window.localStream) {
+              connections[socketListId].addStream(window.localStream);
+            }
+          });
+
+          if (id !== socketIdRef.current) {
+            for (let id2 in connections) {
+              if (id2 === socketIdRef.current) continue;
+
+              try {
+                connections[id2].addStream(window.localStream);
+              } catch (e) {
+                console.log("Error adding stream:", e);
+              }
+
+              connections[id2].createOffer().then((description) => {
+                connections[id2].setLocalDescription(description).then(() => {
+                  socketRef.current.emit(
+                    "signal",
+                    id2,
+                    JSON.stringify({ sdp: connections[id2].localDescription })
+                  );
+                });
+              });
+            }
+          }
+        };
+    });
   };
 
   let getMedia = () => {
     setVideo(videoAvailable);
     setAudio(audioAvailable);
-    // connectToSocketServer();
+    connectToSocketServer();
   };
 
   let connect = () => {
@@ -111,20 +211,12 @@ function VideoMeet() {
       {askForUsername ? (
         <div>
           <h2>Enter into Lobby</h2>
-          <TextField
-            id="outlined-basic"
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            variant="outlined"
-          />
-          <Button variant="contained" onClick={connect}>
-            Connect
-          </Button>
+          <TextField id="outlined-basic" label="Username" value={username} onChange={(e) => setUsername(e.target.value)} variant="outlined" />
+          <Button variant="contained" onClick={connect}>Connect</Button>
 
-          {/*  Video Element to Display Camera Feed */}
+          {/* Video Element to Display Local Camera Feed */}
           <div>
-            <video ref={localVideoRef } style={{height:"30rem" , width:"90rem"}} autoPlay muted></video>
+            <video ref={localVideoRef} style={{ height: "30rem", width: "90rem" }} autoPlay muted></video>
           </div>
         </div>
       ) : null}

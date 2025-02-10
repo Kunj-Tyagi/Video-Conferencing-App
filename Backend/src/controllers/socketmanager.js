@@ -16,6 +16,7 @@ export const connectToSocket = (server) => {
 
   //jab bhi socket se koi connect hota hai,toh ye event fire hota hai io.on("connection")
   io.on("connection", (socket) => {
+    console.log("Someone connected to the server");
     socket.on("join-call", (path) => {
       if (connections[path] === undefined) {
         connections[path] = [];
@@ -61,12 +62,12 @@ export const connectToSocket = (server) => {
     // b) Stores the message in that room’s message history.
     // c) Sends the message to all users in the same room.
     socket.on("chat-message", (data, sender) => {
-      const [matchingRoom, found] = Object.enteries(connections).reduce(
+      const [matchingRoom, found] = Object.entries(connections).reduce(
         ([room, isFound], [roomKey, roomValue]) => {
           if (!isFound && roomValue.includes(socket.id)) {
             return [roomKey, true];
           }
-          retrun[(room, isFound)];
+          retrun[room, isFound];
         },
         ["", false]
       );
