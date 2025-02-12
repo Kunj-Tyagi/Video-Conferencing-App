@@ -13,8 +13,8 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<LandingPages />} />
-          <Route path="/home" element={<HomeComponent/>} />
           <Route path="/auth" element={<Authentication />} />
+          <Route path="/home" element={<HomeComponent/>} />
           <Route path="/history" element={<History/>} />
           <Route path='/:url' element={<VideoMeetComponent/>} /> {/* like localhost:3000/1123 :- 1123 is the Room-Id */}
         </Routes>
