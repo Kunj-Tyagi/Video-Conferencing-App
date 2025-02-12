@@ -10,8 +10,9 @@ import MicOffIcon from "@mui/icons-material/MicOff";
 import ScreenShareIcon from "@mui/icons-material/ScreenShare";
 import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
 import ChatIcon from "@mui/icons-material/Chat";
+import server from "../environment";
 
-const server_url = "http://localhost:8000"; // Server URL for socket connection
+const server_url = server; // Server URL for socket connection
 var connections = {}; // Object to store peer connections
 
 // STUN server configuration for WebRTC (used to establish peer connections)
