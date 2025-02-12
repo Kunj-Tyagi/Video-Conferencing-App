@@ -466,7 +466,7 @@ function VideoMeet() {
     } catch (e) {
       console.log("Error stopping media:", e);
     }
-    window.location.href = "/home";
+    window.location.href = "/";
   };
 
   return (
