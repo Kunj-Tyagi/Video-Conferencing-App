@@ -6,7 +6,7 @@ import Authentication from "./pages/authenication";
 import { AuthProvider } from "./contexts/AuthContext";
 import VideoMeetComponent from "./pages/videomeet";
 import HomeComponent from "./pages/home";
-
+import History from "./pages/history";
 function App() {
   return (
     <Router>
@@ -15,6 +15,7 @@ function App() {
           <Route path="/" element={<LandingPages />} />
           <Route path="/auth" element={<Authentication />} />
           <Route path="/home" element={<HomeComponent/>} />
+          <Route path="/history" element={<History/>} />
           <Route path='/:url' element={<VideoMeetComponent/>} /> {/* like localhost:3000/1123 :- 1123 is the Room-Id */}
         </Routes>
       </AuthProvider>

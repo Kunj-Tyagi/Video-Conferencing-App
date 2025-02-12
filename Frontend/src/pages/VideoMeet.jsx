@@ -465,7 +465,7 @@ function VideoMeet() {
     } catch (e) {
       console.log("Error stopping media:", e);
     }
-      window.location.href = "/home"
+    window.location.href = "/home";
   };
 
   return (
@@ -480,7 +480,14 @@ function VideoMeet() {
             onChange={(e) => setUsername(e.target.value)}
             variant="outlined"
           />
-          <Button variant="contained" onClick={connect}>
+          <Button
+            variant="contained"
+            type="button"
+            onClick={() => {
+              if (username.trim() === "") return; // Prevent empty username submission
+              connect();
+            }}
+          >
             Connect
           </Button>
 
@@ -523,7 +530,16 @@ function VideoMeet() {
                       label="Enter Your Chat"
                       variant="outlined"
                     />
-                    <Button variant="contained" onClick={sendMessage}>
+                    <Button
+                      variant="contained"
+                      onClick={() => {
+                        if (message.trim() !== "") {
+                          // Prevents sending empty or whitespace-only messages
+                          sendMessage();
+                          setMessage(""); // Clear input after sending
+                        }
+                      }}
+                    >
                       Send
                     </Button>
                   </div>

@@ -67,7 +67,7 @@ export const connectToSocket = (server) => {
           if (!isFound && roomValue.includes(socket.id)) {
             return [roomKey, true];
           }
-          retrun[room, isFound];
+          return[room, isFound];
         },
         ["", false]
       );
