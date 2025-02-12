@@ -1,7 +1,15 @@
 import React, { useRef, useEffect, useState } from "react";
-import { TextField, Button } from "@mui/material"; // Import required components
-import "../styles/VideoComponent.css";
+import { TextField, Button, IconButton, Icon, Badge } from "@mui/material"; // Import required components
 import { io } from "socket.io-client"; // Import Socket.IO client
+import styles from "../styles/VideoComponent.module.css";
+import VideocamIcon from "@mui/icons-material/Videocam";
+import VideocamOffIcon from "@mui/icons-material/VideocamOff";
+import CallEndIcon from "@mui/icons-material/CallEnd";
+import MicIcon from "@mui/icons-material/Mic";
+import MicOffIcon from "@mui/icons-material/MicOff";
+import ScreenShareIcon from "@mui/icons-material/ScreenShare";
+import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
+import ChatIcon from "@mui/icons-material/Chat";
 
 const server_url = "http://localhost:8000"; // Server URL for socket connection
 var connections = {}; // Object to store peer connections
@@ -27,7 +35,7 @@ function VideoMeet() {
   let [screenAvailable, setScreenAvailable] = useState(false); // Check if screen sharing is available
   let [messages, setMessages] = useState([]); // Store chat messages
   let [message, setMessage] = useState(""); // Current chat message
-  let [newMessages, setNewMessages] = useState(0); // Track new message count
+  let [newMessages, setNewMessages] = useState(3); // Track new message count
   let [askForUsername, setAskForUsername] = useState(true); // Ask user for a username before connecting
   let [username, setUsername] = useState(""); // Store entered username
   let [videos, setVideos] = useState([]); // Store video streams for rendering
@@ -356,6 +364,87 @@ function VideoMeet() {
     getMedia();
   };
 
+  let handleVideo = () => {
+    setVideo(!video);
+  };
+
+  let handleAudio = () => {
+    setAudio(!audio);
+  };
+
+  let getDisplayMediaSuccess = (stream) => {
+    try {
+      window.localStream.getTracks().forEach((track) => track.stop());
+    } catch (e) {
+      console.log("Error stopping media:", e);
+    }
+
+    window.localStream = stream;
+    localVideoRef.current.srcObject = stream;
+
+    for (let id in connections) {
+      if (id === socketIdRef.current) continue;
+
+      connections[id].addStream(window.localStream);
+      connections[id].createOffer().then((description) => {
+        connections[id]
+          .setLocalDescription(description)
+          .then(() => {
+            socketRef.current.emit(
+              "signal",
+              id,
+              JSON.stringify({ sdp: connections[id].localDescription })
+            );
+          })
+          .catch((e) => console.log(e));
+      });
+    }
+
+    stream.getTracks().forEach(
+      (track) =>
+        (track.onended = () => {
+          setScreenShare(false);
+
+          try {
+            let tracks = localVideoRef.current.srcObject.getTracks();
+            tracks.forEach((track) => track.stop());
+          } catch (e) {
+            console.log("Error stopping media:", e);
+          }
+          //   TODO: BlackSilence
+
+          let blackSilence = (...args) =>
+            new MediaStream([black(...args), silence()]);
+          window.localStream = blackSilence();
+          localVideoRef.current.srcObject = window.localStream;
+
+          getUserMedia();
+        })
+    );
+  };
+
+  let getDisplayMedia = () => {
+    if (screenShare) {
+      if (navigator.mediaDevices.getDisplayMedia) {
+        navigator.mediaDevices
+          .getDisplayMedia({ video: true, audio: true })
+          .then(getDisplayMediaSuccess)
+          .then((stream) => {})
+          .catch((e) => console.log("Error getting display media:", e));
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (screenShare !== undefined) {
+      getDisplayMedia();
+    }
+  }, [screenShare]);
+
+  let handleScreen = () => {
+    setScreenShare(!screenShare);
+  };
+
   return (
     <div>
       {askForUsername ? (
@@ -383,26 +472,52 @@ function VideoMeet() {
           </div>
         </div>
       ) : (
-        <>
-          <video ref={localVideoRef} autoPlay>
+        <div className={styles.meetVideoContainer}>
+          <div className={styles.buttonContainers}>
+            <IconButton onClick={handleVideo} style={{ color: "white" }}>
+              {video === true ? <VideocamIcon /> : <VideocamOffIcon />}
+            </IconButton>
+            <IconButton style={{ color: "red" }}>
+              <CallEndIcon />
+            </IconButton>
+            <IconButton onClick={handleAudio} style={{ color: "white" }}>
+              {audio === true ? <MicIcon /> : <MicOffIcon />}
+            </IconButton>
+
+            {screenAvailable ? (
+              <IconButton onClick={handleScreen} style={{ color: "white" }}>
+                {screenShare ? <ScreenShareIcon /> : <StopScreenShareIcon />}
+              </IconButton>
+            ) : (
+              <></>
+            )}
+
+            <Badge badgeContent={newMessages} color="secondary" max={999}>
+              <IconButton style={{ color: "white" }}>
+                <ChatIcon />
+              </IconButton>
+            </Badge>
+          </div>
+
+          <video className={styles.meetUserVideo} ref={localVideoRef} autoPlay>
             {" "}
           </video>
-          {videos.map((video) => (
-            <div key={video.socketId}>
-              <h2>{video.socketId}</h2>
-              <video
-
-                data-socket={video.socketId}
-                ref={ref=>{
-                     if(ref && video.stream){
-                        ref.srcObject = video.stream;
+          <div className={styles.conferenceView}>
+            {videos.map((video) => (
+              <div key={video.socketId}>
+                <video
+                  data-socket={video.socketId}
+                  ref={(ref) => {
+                    if (ref && video.stream) {
+                      ref.srcObject = video.stream;
                     }
-                }}
-                autoPlay>
-              </video>
-            </div>
-          ))}
-        </>
+                  }}
+                  autoPlay
+                ></video>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
