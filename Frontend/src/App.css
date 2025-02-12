@@ -39,10 +39,10 @@
   font-size: 1.2rem;
 }
 
-.landingMainContainer > div:nth-child(1)  div[role="button"] {
+.landingMainContainer > div:nth-child(1) div[role="button"] {
   background: #d97500;
   width: fit-content; /*No idea*/
-  padding: .8rem;
+  padding: 0.8rem;
   border-radius: 20px;
   margin-top: 1.9rem;
 }
@@ -56,4 +56,36 @@
 .landingMainContainer > div:nth-child(2) img {
   height: 70vh; /* New Trick */
   width: auto;
+}
+
+.navBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 20px;
+  text-align: center;
+}
+.meetContainer {
+  display: flex;
+  padding-inline: 20px;
+  height: 80vh;
+  gap: 10vw;
+  justify-content: center;
+}
+
+.leftPanel {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.rightPanel {
+  display: flex;
+  align-items: center;
+}
+
+.rightPanel > img {
+  width: 30vw;
+  height: auto;
+  border-radius: 20px;
 }

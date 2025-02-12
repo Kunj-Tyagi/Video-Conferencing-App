@@ -31,11 +31,11 @@ function VideoMeet() {
   let [video, setVideo] = useState([]); // Store video streams
   let [audio, setAudio] = useState(); // Store audio state
   let [screenShare, setScreenShare] = useState(false); // Track screen sharing
-  let [showModal, setModal] = useState(false); // Track modal visibility
+  let [showModal, setModal] = useState(true); // Track modal visibility
   let [screenAvailable, setScreenAvailable] = useState(false); // Check if screen sharing is available
   let [messages, setMessages] = useState([]); // Store chat messages
   let [message, setMessage] = useState(""); // Current chat message
-  let [newMessages, setNewMessages] = useState(3); // Track new message count
+  let [newMessages, setNewMessages] = useState(0); // Track new message count
   let [askForUsername, setAskForUsername] = useState(true); // Ask user for a username before connecting
   let [username, setUsername] = useState(""); // Store entered username
   let [videos, setVideos] = useState([]); // Store video streams for rendering
@@ -244,7 +244,15 @@ function VideoMeet() {
     }
   }; // Handle incoming messages from server
 
-  let addMessage = (data) => {}; // Function to handle chat messages
+  let addMessage = (data, sender, socketIdSender) => {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { sender: sender, data: data },
+    ]);
+    if (socketIdSender !== socketIdRef.current) {
+      setNewMessages((prevMessages) => prevMessages + 1);
+    }
+  }; // Function to handle chat messages
 
   // Function to establish a socket connection with the server
   let connectToSocketServer = () => {
@@ -445,6 +453,21 @@ function VideoMeet() {
     setScreenShare(!screenShare);
   };
 
+  let sendMessage = () => {
+    socketRef.current.emit("chat-message", message, username);
+    setMessage("");
+  };
+
+  let handleEndCall = () => {
+    try {
+      let tracks = localVideoRef.current.srcObject.getTracks();
+      tracks.forEach((track) => track.stop());
+    } catch (e) {
+      console.log("Error stopping media:", e);
+    }
+      window.location.href = "/home"
+  };
+
   return (
     <div>
       {askForUsername ? (
@@ -473,11 +496,49 @@ function VideoMeet() {
         </div>
       ) : (
         <div className={styles.meetVideoContainer}>
+          {showModal ? (
+            <div>
+              <div className={styles.chatRoom}>
+                <div className={styles.chatContainer}>
+                  <h1>Chat</h1>
+                  <div className={styles.chattingDisplay}>
+                    {messages.length > 0 ? (
+                      messages.map((item, index) => {
+                        return (
+                          <div style={{ marginBottom: "20px" }} key={index}>
+                            <p style={{ fontWeight: "bold" }}>{item.sender}</p>
+                            <p>{item.data}</p>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <>No Messages Yet</>
+                    )}
+                  </div>
+                  <div className={styles.chattingArea}>
+                    <TextField
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      id="outlined-basic"
+                      label="Enter Your Chat"
+                      variant="outlined"
+                    />
+                    <Button variant="contained" onClick={sendMessage}>
+                      Send
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <></>
+          )}
+
           <div className={styles.buttonContainers}>
             <IconButton onClick={handleVideo} style={{ color: "white" }}>
               {video === true ? <VideocamIcon /> : <VideocamOffIcon />}
             </IconButton>
-            <IconButton style={{ color: "red" }}>
+            <IconButton onClick={handleEndCall} style={{ color: "red" }}>
               <CallEndIcon />
             </IconButton>
             <IconButton onClick={handleAudio} style={{ color: "white" }}>
@@ -493,7 +554,10 @@ function VideoMeet() {
             )}
 
             <Badge badgeContent={newMessages} color="secondary" max={999}>
-              <IconButton style={{ color: "white" }}>
+              <IconButton
+                onClick={() => setModal(!showModal)}
+                style={{ color: "white" }}
+              >
                 <ChatIcon />
               </IconButton>
             </Badge>
