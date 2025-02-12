@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LandingPages from "./pages/landing";
 import Authentication from "./pages/authenication";
 import { AuthProvider } from "./contexts/AuthContext";
-import VideoMeetComponent from "./pages/videomeet";
+import VideoMeetComponent from "./pages/VideoMeet.jsx";
 import HomeComponent from "./pages/home";
 import History from "./pages/history";
 function App() {
